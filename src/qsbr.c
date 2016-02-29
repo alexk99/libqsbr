@@ -123,11 +123,33 @@ qsbr_checkpoint(qsbr_t *qs)
 	atomic_thread_fence(memory_order_release);
 }
 
+/*
+ * Get local epoch
+ */
+qsbr_epoch_t
+qsbr_get_epoch(qsbr_t *qs)
+{
+   qsbr_tls_t *t = pthread_getspecific(qs->tls_key);
+   ASSERT(t != NULL);
+   return t->local_epoch;
+}
+
 qsbr_epoch_t
 qsbr_barrier(qsbr_t *qs)
 {
 	/* Note: atomic operation will issue a store barrier. */
-	return atomic_fetch_add(&qs->global_epoch, 1);
+	return atomic_fetch_add(&qs->global_epoch, 1) + 1;
+}
+
+/*
+ * Start new epoch and wait until all registered threads have observed it
+ */
+void qsbr_wait(qsbr_t *qsbr, const struct timespec sleep)
+{
+   qsbr_epoch_t new_epoch = qsbr_barrier(qsbr);
+   while (!qsbr_sync(qsbr, new_epoch)) {
+      (void)nanosleep(&sleep, NULL);
+   }
 }
 
 bool
