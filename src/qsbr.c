@@ -42,8 +42,13 @@ static_assert(sizeof(qsbr_epoch_t) == 8, "expected 64-bit counter");
 
 typedef struct qsbr_tls {
 	/*
-	 * The thread (local) epoch, observed at qsbr_checkpoint().
+ 	 * The thread (local) epoch, observed at qsbr_checkpoint().
 	 * Also, a pointer to the TLS structure of a next thread.
+	 *
+	 * Extended quiescent state.
+	 * When local_epoch is equal to 1 a thread is in extended quiescent state.
+	 * Extended quiescent state means a thread doesn't access any shared
+	 * memory objects protected by qsbr.
 	 */
 	qsbr_epoch_t		local_epoch;
 	struct qsbr_tls *	next;
@@ -70,7 +75,9 @@ qsbr_create(void)
 		free(qs);
 		return NULL;
 	}
-	qs->global_epoch = 1;
+
+	/* don't forget that 1 is reserved for extended quiescent state */
+	qs->global_epoch = 2;
 	return qs;
 }
 
@@ -163,11 +170,14 @@ qsbr_sync(qsbr_t *qs, qsbr_epoch_t target)
 	qsbr_checkpoint(qs);
 
 	/*
-	 * Have all threads observed the target epoch?
+	 * Have all online threads observed the target epoch?
 	 */
 	t = qs->list;
 	while (t) {
-		if (t->local_epoch < target) {
+		/* skip offline threads, i.e. threads that are
+		 * in extended quiescent state
+		 */
+		if (t->local_epoch != 1 && t->local_epoch < target) {
 			/* Not ready to G/C. */
 			return false;
 		}
@@ -176,4 +186,28 @@ qsbr_sync(qsbr_t *qs, qsbr_epoch_t target)
 
 	/* Detected the grace period. */
 	return true;
+}
+
+/*
+ * Start extended quiescent state
+ */
+static inline void qsbr_thread_offline(qsbr_t *qs)
+{
+	qsbr_tls_t *t = pthread_getspecific(qs->tls_key);
+	ASSERT(t != NULL);
+
+	atomic_thread_fence(memory_order_acquire);
+	t->local_epoch = 1;
+}
+
+/*
+ * Stop extended quiescent state
+ */
+static inline void qsbr_thread_online(qsbr_t *qs)
+{
+	qsbr_tls_t *t = pthread_getspecific(qs->tls_key);
+	ASSERT(t != NULL);
+
+	t->local_epoch = qs->global_epoch;
+	atomic_thread_fence(memory_order_release);
 }
