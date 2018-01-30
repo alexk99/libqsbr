@@ -193,7 +193,7 @@ qsbr_sync(qsbr_t *qs, qsbr_epoch_t target)
 /*
  * Start extended quiescent state
  */
-inline void
+void
 qsbr_thread_offline(qsbr_t *qs)
 {
 	qsbr_tls_t *t = pthread_getspecific(qs->tls_key);
@@ -206,7 +206,7 @@ qsbr_thread_offline(qsbr_t *qs)
 /*
  * Stop extended quiescent state
  */
-inline void
+void
 qsbr_thread_online(qsbr_t *qs)
 {
 	qsbr_tls_t *t = pthread_getspecific(qs->tls_key);
