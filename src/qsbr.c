@@ -30,6 +30,7 @@
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
+#include <time.h>
 
 #include "qsbr.h"
 #include "utils.h"
@@ -151,7 +152,8 @@ qsbr_barrier(qsbr_t *qs)
 /*
  * Start new epoch and wait until all registered threads have observed it
  */
-void qsbr_wait(qsbr_t *qsbr, const struct timespec sleep)
+void
+qsbr_wait(qsbr_t *qsbr, const struct timespec sleep)
 {
    qsbr_epoch_t new_epoch = qsbr_barrier(qsbr);
    while (!qsbr_sync(qsbr, new_epoch)) {

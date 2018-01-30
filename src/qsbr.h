@@ -20,5 +20,9 @@ int		qsbr_register(qsbr_t *);
 void		qsbr_checkpoint(qsbr_t *);
 qsbr_epoch_t	qsbr_barrier(qsbr_t *);
 bool		qsbr_sync(qsbr_t *, qsbr_epoch_t);
+qsbr_epoch_t qsbr_get_epoch(qsbr_t *qs);
+void qsbr_wait(qsbr_t *qsbr, const struct timespec sleep);
+void		qsbr_thread_offline(qsbr_t *qs);
+void		qsbr_thread_online(qsbr_t *qs);
 
 #endif
