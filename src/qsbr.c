@@ -208,7 +208,7 @@ qsbr_thread_offline(qsbr_t *qs)
 	qsbr_tls_t *t = pthread_getspecific(qs->tls_key);
 	ASSERT(t != NULL);
 
-	atomic_thread_fence(memory_order_acquire);
+	atomic_thread_fence(memory_order_release);
 	t->local_epoch = 1;
 }
 
@@ -222,5 +222,5 @@ qsbr_thread_online(qsbr_t *qs)
 	ASSERT(t != NULL);
 
 	t->local_epoch = qs->global_epoch;
-	atomic_thread_fence(memory_order_release);
+	atomic_thread_fence(memory_order_acquire);
 }
